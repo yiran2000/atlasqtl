@@ -5,16 +5,17 @@
 # Internal function implementing sanity checks and needed preprocessing before
 # the application of the different `atlasqtl_*_core` algorithms.
 #
-prepare_data_ <- function(Y, X, tol, maxit, user_seed, verbose, checkpoint_path, 
+prepare_data_ <- function(Y, X, tol_tight, maxit, user_seed, verbose, checkpoint_path, 
                           trace_path) {
 
   check_structure_(user_seed, "vector", "numeric", 1, null_ok = TRUE)
   
-  check_structure_(tol, "vector", "numeric", 1)
-  check_positive_(tol, eps=.Machine$double.eps)
+  check_structure_(tol_tight, "vector", "numeric", 1)
+  check_positive_(tol_tight, eps=.Machine$double.eps)
 
   check_structure_(maxit, "vector", "numeric", 1)
   check_natural_(maxit)
+
 
   check_structure_(X, "matrix", "numeric")
   
@@ -54,7 +55,7 @@ prepare_data_ <- function(Y, X, tol, maxit, user_seed, verbose, checkpoint_path,
   if (is.null(colnames(X))) colnames(X) <- paste0("Cov_x_", 1:p)
   if (is.null(colnames(Y))) colnames(Y) <- paste0("Resp_", 1:q)
 
-  X <- scale(X)
+  # X <- scale(X)
 
   list_X_cst <- rm_constant_(X, verbose)
   X <- list_X_cst$mat
@@ -80,7 +81,7 @@ prepare_data_ <- function(Y, X, tol, maxit, user_seed, verbose, checkpoint_path,
   if (p < 1) stop(paste0("There must be at least 1 non-constant candidate ", 
                          "predictor stored in X."))
 
-  Y <- scale(Y, center = TRUE, scale = FALSE)
+  # Y <- scale(Y, center = TRUE, scale = FALSE)
 
   create_named_list_(Y, X, bool_rmvd_x, initial_colnames_X, rmvd_cst_x, rmvd_coll_x) 
 

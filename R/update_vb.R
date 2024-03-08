@@ -122,9 +122,8 @@ update_eta_vb_ <- function(n, eta, gam_vb, mis_pat = NULL, c = 1) {
   
 }
 
-update_kappa_vb_ <- function(Y, kappa, X_beta_vb, beta_vb, m2_beta, sig2_inv_vb, 
+update_kappa_vb_ <- function(Y,  kappa, X_beta_vb, beta_vb, m2_beta, sig2_inv_vb, 
                              X_norm_sq = NULL, mis_pat = NULL, c = 1) {
-  
   stopifnot(!xor(is.null(X_norm_sq), is.null(mis_pat)))
   
   if (is.null(mis_pat)) {
