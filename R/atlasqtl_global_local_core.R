@@ -15,10 +15,10 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
                                         batch,
                                         tol_loose,
                                         tol_tight,
-                                        burn_in = 20,
-                                        burn_out = 10,
-                                        maxit_subsample = 5,
-                                        n_partial_update = 500,
+                                        burn_in,
+                                        burn_out,
+                                        maxit_subsample,
+                                        n_partial_update,
                                         # c_maxit_subsample = 0,
                                         # min_maxit_subsample = 10, 
                                         # e0 = 0.2,
@@ -27,7 +27,8 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
                                         iter_ladder,
                                         e_ladder, 
                                         eval_perform,
-                                        X_subsample_size) {
+                                        X_subsample_size,
+                                        max_stochastic = 50) {
   
   n <- nrow(Y)
   p <- ncol(X)
@@ -44,6 +45,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
     mis_pat <- X_norm_sq <- NULL
     
   }
+  
   
   #precompute Y
   # Y_norm_sq <- colSums(Y^2)
@@ -166,6 +168,8 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
         e = max(e_ladder)
       }
       
+      # print(subsample_q)
+      # print(partial)
       # generate subsample
       if(subsample_q | partial){
         # calculate the selection probability 
@@ -188,14 +192,26 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       }
       
       #randomly select a subsample of X
+      if(it > max_stochastic){
+        X_subsample_size = nrow(X)
+      }
       if(!is.null(X_subsample_size)){
         row_ind_subsample = sample(nrow(X), X_subsample_size)
         X_subsample = scale(X[row_ind_subsample, ])
         Y_subsample = scale(Y[row_ind_subsample, ], center = TRUE, scale = FALSE)
         mis_pat_subsample = mis_pat[row_ind_subsample, ]
+      }else{
+        X_subsample = X
+        Y_subsample = Y
+        mis_pat_subsample = mis_pat
       }
       X_beta_vb <- update_X_beta_vb_(X_subsample, beta_vb)
-      X_norm_sq <- crossprod(X_subsample^2, mis_pat_subsample)
+      
+      if (!is.null(mis_pat)) {
+        X_norm_sq <- crossprod(X_subsample^2, mis_pat_subsample)
+      } else {
+        X_norm_sq <- NULL
+      }
     
       
       subsample_size_q  = length(sample_q)
@@ -420,7 +436,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           # it <= it_init + 1 evaluate the ELBO for the first two non-annealed iterations
           # to (also) evaluate convergence between two consecutive iterations
           
-          lb_new <- elbo_global_local_(Y_subsample, A2_inv, beta_vb, df, eta, eta_vb, gam_vb,
+          lb_new <- elbo_global_local_(Y = Y_subsample, A2_inv, beta_vb, df, eta, eta_vb, gam_vb,
                                        kappa, kappa_vb, L_vb, lam2_inv_vb, 
                                        log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, 
                                        m0, m2_beta,
@@ -429,7 +445,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
                                        shr_fac_inv, sig02_inv_vb, sig2_beta_vb,
                                        sig2_inv_vb,  sig2_theta_vb, sig2_zeta_vb,
                                        t02_inv, tau_vb, theta_vb, vec_sum_log_det_zeta,
-                                       xi_inv_vb, zeta_vb, X_norm_sq, mis_pat_subsample)
+                                       xi_inv_vb, zeta_vb, X_norm_sq, mis_pat = mis_pat_subsample)
           
           if (verbose != 0 & (it == it_init | it %% max(5, batch_conv) == 0))
             cat(paste0("ELBO = ", format(lb_new), "\n\n"))
@@ -438,6 +454,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           #   stop("ELBO not increasing monotonically. Exit. ")
           
           diff_lb <- abs(lb_new - lb_old)
+          print(diff_lb)
           
           if(eval_perform){
             it_eval_ls = c(it_eval_ls, it)
@@ -450,6 +467,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           }
           
           sum_exceed <- sum(diff_lb > (times_conv_sched * tol))
+
           
           if (sum_exceed == 0){
             
@@ -476,6 +494,9 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           partial = TRUE
           it_0 = 0
           # print("a")
+          # print(it_init)
+          # print(burn_in)
+          # print(it)
         }
         
         if (partial == TRUE & it >= (it_init + burn_in) & it_0 >= n_partial_update){
@@ -549,15 +570,15 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
                          theta_vb, X_beta_vb, xi_inv_vb, zeta_vb)
       
     } else {
-      
+
       names_x <- colnames(X)
       names_y <- colnames(Y)
       names_n <- rownames(Y)
-      
+
       rownames(gam_vb) <- rownames(beta_vb) <- names_x
       colnames(gam_vb) <- colnames(beta_vb) <- names_y
-      rownames(X_beta_vb) <- names_n
-      colnames(X_beta_vb) <- names_y
+      # rownames(X_beta_vb) <- names_n
+      # colnames(X_beta_vb) <- names_y
       names(theta_vb) <- names_x
       names(zeta_vb) <- names_y
       names(lam2_inv_vb) <- names_x
