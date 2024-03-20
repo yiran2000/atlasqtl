@@ -28,7 +28,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
                                         e_ladder, 
                                         eval_perform,
                                         X_subsample_size,
-                                        max_stochastic = 50) {
+                                        max_stochastic) {
   
   n <- nrow(Y)
   p <- ncol(X)
@@ -467,7 +467,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           }
           
           sum_exceed <- sum(diff_lb > (times_conv_sched * tol))
-
           
           if (sum_exceed == 0){
             
@@ -633,7 +632,7 @@ elbo_global_local_ <- function(Y, A2_inv, beta_vb, df, eta, eta_vb, gam_vb,
                                sig2_inv_vb,  sig2_theta_vb, sig2_zeta_vb, 
                                t02_inv, tau_vb, theta_vb, vec_sum_log_det_zeta, 
                                xi_inv_vb, zeta_vb, X_norm_sq, mis_pat) {
-  
+  browser()
   n <- nrow(Y)
   p <- length(L_vb)
   
