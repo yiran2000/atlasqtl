@@ -67,6 +67,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
   rm(list_init)
   
   theta_plus_zeta_vb <- sweep(tcrossprod(theta_vb, rep(1, q)), 2, zeta_vb, `+`)
+
   log_Phi_theta_plus_zeta <- pnorm(theta_plus_zeta_vb, log.p = TRUE)
   log_1_min_Phi_theta_plus_zeta <- pnorm(theta_plus_zeta_vb, log.p = TRUE, lower.tail = FALSE)
   
@@ -216,6 +217,11 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       subsample_size_q  = length(sample_q)
       
+      if(eval_perform){
+        subsample_ls = c(subsample_ls, subsample_q)
+        partial_ls = c(partial_ls, partial)
+      }
+      
       # % #
       nu_vb <- update_nu_vb_(nu, sum(gam_vb), c = c)
       rho_vb <- update_rho_vb_(rho, m2_beta, tau_vb, c = c)
@@ -246,6 +252,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
         # Shuffle updates order at each iteration
         #
         shuffled_ind <- as.numeric(sample(0:(p-1))) # Zero-based index in C++
+
         
         if (is.null(mis_pat)) {
           tic("for loop")
@@ -264,7 +271,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           time = toc()
           t = time$toc - time$tic
         }
-        
+
         
       } else if (batch == "0"){ # no batch, used only internally (slower)
                                 # schemes "x" of "x-y" are not batch concave
@@ -277,32 +284,40 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
             
             for (j in sample(1:p)) {
               
-              X_beta_vb[, k] <- X_beta_vb[, k] - X[, j] * beta_vb[j, k]
+              X_beta_vb[, k] <- X_beta_vb[, k] - X_subsample[, j] * beta_vb[j, k]
               
-              mu_beta_vb[j, k] <- c * sig2_beta_vb[k] * tau_vb[k] * crossprod(Y[, k] - X_beta_vb[, k], X[, j])
+              mu_beta_vb[j, k] <- c * sig2_beta_vb[k] * tau_vb[k] * crossprod(Y_subsample[, k] - X_beta_vb[, k], X_subsample[, j])
               
+              print("a")
+              print((pnorm(theta_vb[j] + zeta_vb[k], lower.tail = FALSE, log.p = TRUE) -
+                       pnorm(theta_vb[j] + zeta_vb[k], log.p = TRUE) -
+                       log_tau_vb[k] / 2 - log_sig2_inv_vb / 2 -
+                       mu_beta_vb[j, k] ^ 2 / (2 * sig2_beta_vb[k]) -
+                       log(sig2_beta_vb[k]) / 2))
               gam_vb[j, k] <- exp(-log_one_plus_exp_(c * (pnorm(theta_vb[j] + zeta_vb[k], lower.tail = FALSE, log.p = TRUE) -
                                                             pnorm(theta_vb[j] + zeta_vb[k], log.p = TRUE) -
                                                             log_tau_vb[k] / 2 - log_sig2_inv_vb / 2 -
                                                             mu_beta_vb[j, k] ^ 2 / (2 * sig2_beta_vb[k]) -
                                                             log(sig2_beta_vb[k]) / 2)))
+              print("gam_vb after")
+              print(gam_vb[j, k])
               
               beta_vb[j, k] <- gam_vb[j, k] * mu_beta_vb[j, k]
               
-              X_beta_vb[, k] <- X_beta_vb[, k] + X[, j] * beta_vb[j, k]
+              X_beta_vb[, k] <- X_beta_vb[, k] + X_subsample[, j] * beta_vb[j, k]
               
             }
             
           } else {
             
-            X_beta_vb[, k] <- X_beta_vb[, k] * mis_pat[, k]
-            X_pat <- sweep(X, 1, mis_pat[, k], `*`)
+            X_beta_vb[, k] <- X_beta_vb[, k] * mis_pat_subsample[, k]
+            X_pat <- sweep(X_subsample, 1, mis_pat_subsample[, k], `*`)
             
             for (j in sample(1:p)) {
               
               X_beta_vb[, k] <- X_beta_vb[, k] - X_pat[, j] * beta_vb[j, k]
               
-              mu_beta_vb[j, k] <- c * sig2_beta_vb[j, k] * tau_vb[k] * crossprod(Y[, k] - X_beta_vb[, k], X_pat[, j])
+              mu_beta_vb[j, k] <- c * sig2_beta_vb[j, k] * tau_vb[k] * crossprod(Y_subsample[, k] - X_beta_vb[, k], X_pat[, j])
               
               gam_vb[j, k] <- exp(-log_one_plus_exp_(c * (pnorm(theta_vb[j] + zeta_vb[k], lower.tail = FALSE, log.p = TRUE) -
                                                             pnorm(theta_vb[j] + zeta_vb[k], log.p = TRUE) -
@@ -331,6 +346,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       # keep this order!
       #  
+      
       L_vb <- c_s * sig02_inv_vb * shr_fac_inv * (theta_vb^2 + sig2_theta_vb - 2 * theta_vb * m0 + m0^2) / 2 / df 
       rho_xi_inv_vb <- c_s * (A2_inv + sig02_inv_vb) 
       
@@ -369,9 +385,11 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       xi_inv_vb <- nu_xi_inv_vb / rho_xi_inv_vb
       
       sig2_theta_vb <- update_sig2_c0_vb_(q, 1 / (sig02_inv_vb * lam2_inv_vb * shr_fac_inv), c = c)
+
       
       theta_vb <- update_theta_vb_(Z, m0, sig02_inv_vb * lam2_inv_vb * shr_fac_inv, sig2_theta_vb,
                                    vec_fac_st = NULL, zeta_vb, is_mat = FALSE, c = c)
+      
       
       nu_s0_vb <- update_nu_vb_(1 / 2, p, c = c_s)
       
@@ -382,8 +400,10 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       zeta_vb <- update_zeta_vb_(Z, theta_vb, n0, sig2_zeta_vb, t02_inv,
                                  is_mat = FALSE, c = c) 
-      
+
+
       theta_plus_zeta_vb <- sweep(tcrossprod(theta_vb, rep(1, q)), 2, zeta_vb, `+`)
+
       log_Phi_theta_plus_zeta <- pnorm(theta_plus_zeta_vb, log.p = TRUE)
       log_1_min_Phi_theta_plus_zeta <- pnorm(theta_plus_zeta_vb, log.p = TRUE, lower.tail = FALSE)  
       
@@ -454,7 +474,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           #   stop("ELBO not increasing monotonically. Exit. ")
           
           diff_lb <- abs(lb_new - lb_old)
-          print(diff_lb)
           
           if(eval_perform){
             it_eval_ls = c(it_eval_ls, it)
@@ -531,10 +550,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       t1 = Sys.time()-t0
       if(eval_perform){
-        it_ls = c(it_ls, it)
         ELBO_ls = c(ELBO_ls, lb_new)
-        subsample_ls = c(subsample_ls, subsample_q)
-        partial_ls = c(partial_ls, partial)
         e_ls = c(e_ls, e)
         ELBO_diff_ls = c(ELBO_diff_ls, diff_lb)
         time_loop_ls = c(time_loop_ls, t)
@@ -586,7 +602,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       if(eval_perform){
         perform_df = data.frame(
-          iter = it_ls %>% unlist,
           subsample = subsample_ls %>% unlist,
           partial = partial_ls %>% unlist,
           ELBO = ELBO_ls %>% unlist,

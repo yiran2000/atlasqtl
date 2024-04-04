@@ -180,7 +180,6 @@ inv_mills_ratio_ <- function(y, U, log_1_pnorm_U, log_pnorm_U) {
     m[m < -U] <- -U
     
   } else {
-    
     m <- - exp(-U^2/2 - log(sqrt(2*pi)) - log_1_pnorm_U)
     m[m > -U] <- -U
     

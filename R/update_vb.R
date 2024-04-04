@@ -131,7 +131,6 @@ update_kappa_vb_ <- function(Y, kappa, X_beta_vb, beta_vb, m2_beta, sig2_inv_vb,
     
     n <- nrow(Y)
     
-    print(dim(X_beta_vb))
     c * (kappa + (colSums(Y^2) - 2 * colSums(Y * X_beta_vb)  +
                     (n - 1 + sig2_inv_vb) * colSums(m2_beta) +
                     colSums(X_beta_vb^2) - (n - 1) * colSums(beta_vb^2))/ 2)
@@ -217,8 +216,10 @@ update_Z_ <- function(gam_vb, mat_v_mu, log_1_pnorm, log_pnorm, c = 1) {
     
     sqrt_c <- 1
   }
- # browser()
+
   imr0 <- inv_mills_ratio_(0, sqrt_c * mat_v_mu, log_1_pnorm, log_pnorm)
+
+  
   (gam_vb * (inv_mills_ratio_(1, sqrt_c * mat_v_mu, log_1_pnorm, log_pnorm) - imr0) + imr0) / sqrt_c + mat_v_mu
 
 }

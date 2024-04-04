@@ -54,7 +54,7 @@ void coreDualLoop(const MapMat X,
       
       mu_beta_vb(j, k) = c * sig2_beta_vb[k] * tau_vb[k] *
         (Y.col(k) - (X_beta_vb.col(k) - X.col(j) * m1_beta_jk)).dot(X.col(j));
-      
+
       
       gam_vb(j, k) = exp(-logOnePlusExp(c * (log_1_min_Phi_theta_plus_zeta(j, k) - log_Phi_theta_plus_zeta(j, k)
                                                - mu_beta_vb(j, k)*mu_beta_vb(j, k) / (2 * sig2_beta_vb[k])
