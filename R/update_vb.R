@@ -131,6 +131,7 @@ update_kappa_vb_ <- function(Y, kappa, X_beta_vb, beta_vb, m2_beta, sig2_inv_vb,
     
     n <- nrow(Y)
     
+    print(dim(X_beta_vb))
     c * (kappa + (colSums(Y^2) - 2 * colSums(Y * X_beta_vb)  +
                     (n - 1 + sig2_inv_vb) * colSums(m2_beta) +
                     colSums(X_beta_vb^2) - (n - 1) * colSums(beta_vb^2))/ 2)

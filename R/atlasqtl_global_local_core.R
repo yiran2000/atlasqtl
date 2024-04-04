@@ -436,16 +436,16 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
           # it <= it_init + 1 evaluate the ELBO for the first two non-annealed iterations
           # to (also) evaluate convergence between two consecutive iterations
           
-          lb_new <- elbo_global_local_(Y = Y_subsample, A2_inv, beta_vb, df, eta, eta_vb, gam_vb,
+          lb_new <- elbo_global_local_(Y, X, A2_inv, beta_vb, df, eta, eta_vb, gam_vb,
                                        kappa, kappa_vb, L_vb, lam2_inv_vb, 
                                        log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, 
                                        m0, m2_beta,
-                                       X_beta_vb, n0, nu, nu_s0_vb, nu_vb, nu_xi_inv_vb,
+                                       n0, nu, nu_s0_vb, nu_vb, nu_xi_inv_vb,
                                        Q_app, rho, rho_s0_vb, rho_vb, rho_xi_inv_vb,
                                        shr_fac_inv, sig02_inv_vb, sig2_beta_vb,
                                        sig2_inv_vb,  sig2_theta_vb, sig2_zeta_vb,
                                        t02_inv, tau_vb, theta_vb, vec_sum_log_det_zeta,
-                                       xi_inv_vb, zeta_vb, X_norm_sq, mis_pat = mis_pat_subsample)
+                                       xi_inv_vb, zeta_vb, mis_pat = mis_pat)
           
           if (verbose != 0 & (it == it_init | it %% max(5, batch_conv) == 0))
             cat(paste0("ELBO = ", format(lb_new), "\n\n"))
@@ -623,21 +623,29 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
 # Internal function which implements the marginal log-likelihood variational
 # lower bound (ELBO) corresponding to the `atlasqtl_struct_core` algorithm.
 #
-elbo_global_local_ <- function(Y, A2_inv, beta_vb, df, eta, eta_vb, gam_vb, 
+elbo_global_local_ <- function(Y, X, A2_inv, beta_vb, df, eta, eta_vb, gam_vb, 
                                kappa, kappa_vb, L_vb, lam2_inv_vb, 
                                log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, m0, m2_beta, 
-                               X_beta_vb, n0, nu, nu_s0_vb, nu_vb, nu_xi_inv_vb, 
+                               n0, nu, nu_s0_vb, nu_vb, nu_xi_inv_vb, 
                                Q_app, rho, rho_s0_vb, rho_vb, rho_xi_inv_vb, 
                                shr_fac_inv, sig02_inv_vb, sig2_beta_vb, 
                                sig2_inv_vb,  sig2_theta_vb, sig2_zeta_vb, 
                                t02_inv, tau_vb, theta_vb, vec_sum_log_det_zeta, 
-                               xi_inv_vb, zeta_vb, X_norm_sq, mis_pat) {
-  browser()
+                               xi_inv_vb, zeta_vb, mis_pat) {
   n <- nrow(Y)
   p <- length(L_vb)
   
+  # Get the X_beta_vb and X_norm_sq for the complete data
+  X_beta_vb = update_X_beta_vb_(X, beta_vb)
+  if (!is.null(mis_pat)) {
+    X_norm_sq <- crossprod(X^2, mis_pat)
+  } else {
+    X_norm_sq <- NULL
+  }
+  
   # needed for monotonically increasing elbo.
   #
+  
   eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat)
   kappa_vb <- update_kappa_vb_(Y, kappa, X_beta_vb, beta_vb, m2_beta, 
                                sig2_inv_vb, X_norm_sq, mis_pat)
