@@ -19,11 +19,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
                                         burn_out,
                                         maxit_subsample,
                                         n_partial_update,
-                                        # c_maxit_subsample = 0,
-                                        # min_maxit_subsample = 10, 
-                                        # e0 = 0.2,
-                                        # c_e = 1/500,
-                                        # ELBO_diff_ladder, 
                                         iter_ladder,
                                         e_ladder, 
                                         eval_perform,
@@ -198,7 +193,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       }
       if(!is.null(X_subsample_size)){
         row_ind_subsample = sample(nrow(X), X_subsample_size)
-        X_subsample = scale(X[row_ind_subsample, ])
+        X_subsample = scale(X[row_ind_subsample, ], center = TRUE, scale = FALSE)
         Y_subsample = scale(Y[row_ind_subsample, ], center = TRUE, scale = FALSE)
         mis_pat_subsample = mis_pat[row_ind_subsample, ]
       }else{
