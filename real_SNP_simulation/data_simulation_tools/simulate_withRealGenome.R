@@ -1,7 +1,7 @@
 library(dplyr)
 library(data.table)
 require(echoseq)
-source("~/project/atlasqtl_code/atlasqtl/real_SNP_simulation/data_simulation_tools/data_generation_utils.R")
+# source("~/project/atlasqtl_code/atlasqtl/real_SNP_simulation/data_simulation_tools/data_generation_utils.R")
 
 
 simulate_withRealGenome = function(X, p, q = 3000, 

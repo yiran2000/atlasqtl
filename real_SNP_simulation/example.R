@@ -6,17 +6,23 @@ library(tictoc)
 library(echoseq)
 library(PRROC)
 
-source("~/project/atlasqtl_code/atlasqtl/real_SNP_simulation/data_simulation_tools/simulate_withRealGenome.R") #change the file directory as you like
+#change the file directory as in your case
+geno_path = "C:/Users/Yiran/OneDrive - University of Cambridge/Documents/PhD"
+simulation_tool_path = 
+"C:\\Users\\Yiran\\OneDrive - University of Cambridge\\Documents\\PhD\\atlasqtl\\real_SNP_simulation\\data_simulation_tools"
 
+source(file.path(simulation_tool_path, "data_generation_utils.R")) 
+source(file.path(simulation_tool_path, "simulate_withRealGenome.R")) 
 
 #-------------------------------------------------------------------------------
 # setting up parameters, these are the real scopes, but it will take quite some time to run 
 # you can play with small ones first as you like
 q = 3000   
 p = 1000
+n = 35000
 
-seed = 2024
-X_chunk_size = NULL
+
+active_ratio_p = 0.2
 max_tot_pve = 0.3
 sh2 = 20
 
@@ -24,41 +30,33 @@ sh2 = 20
 #Data simulation
 #X
 geno = fread(file.path(geno_path, "imputed_chr1_ld1_filtered.raw"))
-
-ID_values <- strsplit(geno$IID, "_")
-geno$FID <- sapply(ID_values, function(x) x[1]) %>% as.integer()
-geno$IID <- sapply(ID_values, function(x) x[2]) %>% as.integer()
-
-ID = readRDS(file.path(geno_path, "sample_ID.rds"))
-geno = geno[match(ID, geno$IID), ]
-# X = geno[,7:ncol(geno)]
-# colnames(X) = sapply(strsplit(colnames(X), "_"), `[`, 1)
-# rownames(X) = ID
-
-X = geno[match(ID, geno[["IID"]]),7:ncol(geno)]
+X = geno[sample(1:nrow(geno), n),7:ncol(geno)] #randomly subset n number of samples
 colnames(X) = sapply(strsplit(colnames(X), "_"), `[`, 1)
-rownames(X) = ID
 
 #with the seed as p, the dataset simulated should be the each for each p
 list = simulate_withRealGenome(X, p=p, q=q, 
                                missing_ratio = 0,
-                               active_ratio_p = 0.2, active_ratio_q = 0.02,
-                               X_chunk_size = X_chunk_size,
+                               active_ratio_q = 0.02, #sugges to fix this one
+                               active_ratio_p = active_ratio_p, 
                                max_tot_pve = max_tot_pve,
                                sh2 = sh2,
-                               seed = seed)
+                               X_chunk_size = NULL,
+                               seed = 2024)
 X = list$X
 Y = list$Y
 pat = list$pat
 
-#Mean impute Y
+# Mean impute Y
+# If you want, you can set missing_ratio = 0.2 and then mean-impute, which is more simuler to the real case
 # Y_meanImp = na_mean(as.data.frame(Y))
 
 
 # manhattan plot
-# data.frame(SNP = 1:nrow(pat), ProteinCount = rowSums(pat)) %>% ggplot(
-#   aes(x = SNP, y = ProteinCount)
-# ) +geom_point()
+# Plot the number of proteins associated with each SNP to understand the simulated data better
+# You can plot the one inferred by atlasQTL to compare
+data.frame(SNP = 1:nrow(pat), ProteinCount = rowSums(pat)) %>% ggplot(
+  aes(x = SNP, y = ProteinCount)
+) +geom_point()
 
 #-------------------------------------------------------------------------------
 # Run atlasQTL
