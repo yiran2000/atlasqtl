@@ -36,8 +36,8 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
                                         end_full = F, #whether the algorithm should go back to full in the end
                                         # epsilon = c(2, 1.5, 0.25),
                                         # epsilon = c(0.2, 1, 2, 2),#e0, emax, ec50, n
-                                        epsilon_scheme = "logistic",
-                                        
+                                        subsample_scheme = "logistic",
+                                        fix_size = NULL,
                                         min_epsilon = 0.1,
                                         geom_alpha = NULL,
                                         eval_perform) {
@@ -238,34 +238,49 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       if (verbose != 0 &  (it == 1 | it %% max(5, batch_conv) == 0)) 
         cat(paste0("Iteration ", format(it), "... \n"))
       
-      
       # generate subsample
       if(partial){
         # update e:
         # e = lognormal_cdf(diff_lb, mu=epsilon[1], sigma=epsilon[2], m=epsilon[3])
-        if(epsilon_scheme == "logistic"){
+        if(subsample_scheme == "logistic"){
           e = max(min_epsilon, logistic_function(log(diff_lb)))
-        }else if(epsilon_scheme == "geometric"){
-          e <- max(min_epsilon, geom_alpha^(it_0-1))
+        }else if(subsample_scheme == "geometric"){
+          if(geom_alpha == 0){
+            e = 0
+          }else{
+            e <- max(min_epsilon, geom_alpha^(it_0-1))
+          }
           # e = 1- tanh_function(log(it)/2)
+        }else if (subsample_scheme == "minimum"){
+          e = min_epsilon
         }
+        
         #use log-scale relative ELBO
         
         # calculate the selection probability 
-        r_vc = 1- apply((1 - gam_vb), 2, prod) #PPI
-        select_prob =  (1 - e)*r_vc + e #probability of selecting each response by adding the error
-
-        sample_q = c(0:(q-1))[rbinom(q, size = 1, prob = select_prob) == 1]
-
-        #save
+        if(subsample_scheme == "random"){
+          select_prob = rep(0.5, q)
+        }else{
+          r_vc = 1- apply((1 - gam_vb), 2, prod) #PPI
+          select_prob =  (1 - e)*r_vc + e #probability of selecting each response by adding the error
+        }
+        
+        if(is.null(fix_size)){
+          sample_q = c(0:(q-1))[rbinom(q, size = 1, prob = select_prob) == 1]
+        }else{
+          sample_q = sample(c(0:(q-1)), size = fix_size*q, replace = FALSE, prob = select_prob)
+        }
+        
         select_prob_ls = append(select_prob_ls, list(select_prob))
         
       }else{
+
         sample_q = sample(0:(q-1))
-        #save
         select_prob_ls = append(select_prob_ls, list(rep(1, q)))
       }
+
       
+ 
       
       #record partial and subsample_q
       if(eval_perform){

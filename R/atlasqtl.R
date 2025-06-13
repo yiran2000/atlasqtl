@@ -189,7 +189,8 @@ atlasqtl <- function(Y, X, p0, anneal = c(1, 2, 10), maxit = 1000,
                      end_full = F, #whether the algorithm should go back to full in the end
                      # epsilon = c(2, 1.5, 0.25),
                      # epsilon = c(0.2, 1, 2, 2),#e0, emax, ec50, n
-                     epsilon_scheme = "logistic",
+                     subsample_scheme = "logistic",
+                     fix_size = NULL,
                      min_epsilon = 0.1,
                      geom_alpha = NULL,
                      eval_perform) {
@@ -293,7 +294,8 @@ atlasqtl <- function(Y, X, p0, anneal = c(1, 2, 10), maxit = 1000,
                                              max_partial, #maximum number of iterations for partial-update, if one wants to add
                                              end_full, #whether the algorithm should go back to full in the end
                                              # epsilon = c(2, 1.5, 0.25),
-                                             epsilon_scheme,#e0, emax, ec50, n
+                                             subsample_scheme,#e0, emax, ec50, n
+                                             fix_size,
                                              min_epsilon,
                                              geom_alpha,
                                              eval_perform)
