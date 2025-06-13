@@ -20,7 +20,7 @@ update_m2_beta_ <- function(gam_vb, mu_beta_vb, sig2_beta_vb, sweep = FALSE, mis
   
   if(sweep | is.null(mis_pat)) {
     
-    sweep(mu_beta_vb ^ 2, 2, sig2_beta_vb, `+`) * gam_vb
+    sweep(mu_beta_vb ^ 2, 2, sig2_beta_vb, `+`) * gam_vb #using or not using sweep is actually the same
     
   } else {
     
@@ -34,14 +34,14 @@ update_sig2_beta_vb_ <- function(n, sig2_inv_vb, tau_vb = NULL, X_norm_sq = NULL
   
   if(is.null(tau_vb)) {
     
-    if (is.null(X_norm_sq))
+    if (is.null(X_norm_sq)) 
       1 / (c * (n - 1 + sig2_inv_vb))
     else
       1 / (c * (X_norm_sq + sig2_inv_vb))
     
   } else {
     
-    if (is.null(X_norm_sq))
+    if (is.null(X_norm_sq)) #no missing 
       1 / (c * (n - 1 + sig2_inv_vb) * tau_vb)
     else
       1 / (c * sweep(X_norm_sq + sig2_inv_vb, 2, tau_vb, `*`))
@@ -96,17 +96,12 @@ update_sig2_c0_vb_ <- function(d, s02, c = 1) 1 / (c * (d + (1/s02)))
 ## zeta's updates ##
 #####################
 
-update_zeta_vb_ <- function(Z, mat_add, n0, sig2_zeta_vb, t02_inv, is_mat = FALSE, c = 1) {
-  
-  
-  if (is_mat) {
-    as.vector(c * sig2_zeta_vb * (colSums(Z) + t02_inv * n0 - colSums(mat_add))) # mat_add <- sweep(mat_v_mu, 1, zeta_vb, `-`)
-  } else {
-    # as.vector(sig2_zeta_vb %*% (colSums(Z) + t02_inv %*% n0 - sum(theta_vb)))
-    # sig2_zeta_vb and t02_inv is stored as a scalar which represents the value on the diagonal of the corresponding diagonal matrix
-    as.vector(c * sig2_zeta_vb * (colSums(Z) + t02_inv * n0 - sum(mat_add))) # mat_add = theta_vb
-  }
-  
+update_zeta_vb_ <- function(Z, mat_add, n0, sig2_zeta_vb, t02_inv, c = 1) {
+  # as.vector(sig2_zeta_vb %*% (colSums(Z) + t02_inv %*% n0 - sum(theta_vb)))
+  # sig2_zeta_vb and t02_inv is stored as a scalar which represents the value on the diagonal of the corresponding diagonal matrix
+  as.vector(c * sig2_zeta_vb * (colSums(Z) + t02_inv * n0 - sum(mat_add))) # mat_add = theta_vb
+
+
 }
 
 #####################
