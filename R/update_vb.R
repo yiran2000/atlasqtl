@@ -239,7 +239,7 @@ update_Z_ <- function(gam_vb, mat_v_mu, log_1_pnorm, log_pnorm, c = 1) {
     
     sqrt_c <- sqrt(c)
     
-    log_pnorm <- pnorm(sqrt_c * mat_v_mu, log.p = TRUE)
+    log_pnorm <- pnorm(sqrt_c * mat_v_mu, log.p = TRUE) #mat_v_mu is actually theta_plus_zeta_vb
     log_1_pnorm <- pnorm(sqrt_c * mat_v_mu, log.p = TRUE, lower.tail = FALSE)
     
   } else {
@@ -248,6 +248,40 @@ update_Z_ <- function(gam_vb, mat_v_mu, log_1_pnorm, log_pnorm, c = 1) {
   }
   
   imr0 <- inv_mills_ratio_(0, sqrt_c * mat_v_mu, log_1_pnorm, log_pnorm)
-  (gam_vb * (inv_mills_ratio_(1, sqrt_c * mat_v_mu, log_1_pnorm, log_pnorm) - imr0) + imr0) / sqrt_c + mat_v_mu
+  Z = (gam_vb * (inv_mills_ratio_(1, sqrt_c * mat_v_mu, log_1_pnorm, log_pnorm) - imr0) + imr0) / sqrt_c + mat_v_mu
   
+  return(Z)
+  
+}
+
+update_Z_partial_ <- function(Z, gam_vb, mat_v_mu, log_1_pnorm, log_pnorm, sample_q, c = 1) {
+  
+  # log_1_pnorm = log_1_min_Phi_theta_plus_zeta
+  # log_pnorm = log_Phi_theta_plus_zeta
+  # mat_v_mu = theta_plus_zeta_vb
+  # sqrt_c = 1
+  # sample_q = sample_q + 1
+  
+  if (!isTRUE(all.equal(c, 1))) {
+    sqrt_c <- sqrt(c)
+    log_pnorm_all <- pnorm(sqrt_c * mat_v_mu[, sample_q, drop = FALSE], log.p = TRUE)
+    log_1_pnorm_all <- pnorm(sqrt_c * mat_v_mu[, sample_q, drop = FALSE], log.p = TRUE, lower.tail = FALSE)
+  } else {
+    sqrt_c <- 1
+    log_pnorm_all <- log_pnorm[, sample_q, drop = FALSE]
+    log_1_pnorm_all <- log_1_pnorm[, sample_q, drop = FALSE]
+  }
+  
+  mat_v_mu_sub <- mat_v_mu[, sample_q, drop = FALSE]
+  gam_vb_sub <- gam_vb[, sample_q, drop = FALSE]
+  
+  imr0 <- inv_mills_ratio_(0, sqrt_c * mat_v_mu_sub, log_1_pnorm_all, log_pnorm_all)
+  imr1 <- inv_mills_ratio_(1, sqrt_c * mat_v_mu_sub, log_1_pnorm_all, log_pnorm_all)
+  
+  Z_sub <- (gam_vb_sub * (imr1 - imr0) + imr0) / sqrt_c + mat_v_mu_sub
+  
+  # Z2 = Z
+  Z[, sample_q] <- Z_sub
+  
+  return(Z)
 }
