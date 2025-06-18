@@ -158,7 +158,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
     sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c)
     
     
-    
     # % # log_tau ( we have tau inialized but to get log tau, a little extra calc)
     eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat, c = c)
     kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
@@ -350,26 +349,21 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       # tau_vb <- eta_vb / kappa_vb
       # 
       # log_tau_vb <- update_log_tau_vb_(eta_vb, kappa_vb)
-
+      
       eta_vb[sample_q] <- update_eta_vb_(n, eta[sample_q], gam_vb[,sample_q], mis_pat, c = c)
       kappa_vb[sample_q] <- update_kappa_vb_partial_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
-                                   beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, sample_q, c = c)
+                                                     beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, sample_q, c = c)
       
       tau_vb[sample_q] <- eta_vb[sample_q] / kappa_vb[sample_q]
       
       log_tau_vb[sample_q] <- update_log_tau_vb_(eta_vb[sample_q], kappa_vb[sample_q])
-      
+
       
       #Z
       # Z1 <- update_Z_(gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, c = c)
       Z <- update_Z_partial_(Z, gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, sample_q, c = c)
 
-      
-      #finally, update zeta
-      #zeta
-      # zeta_vb <- update_zeta_vb_(Z, theta_vb, n0, sig2_zeta_vb, t02_inv, c = c) #local parameter zeta, can also be implemented partial
-      zeta_vb[sample_q] <- update_zeta_vb_(Z[,sample_q], theta_vb, n0[sample_q], sig2_zeta_vb, t02_inv, c = c)
-      
+
       
       time_local = toc()
       
@@ -440,6 +434,10 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       sig02_inv_vb <- as.numeric(nu_s0_vb / rho_s0_vb) #global parameter sigma
       
+      #finally, update zeta
+      #zeta
+      zeta_vb <- update_zeta_vb_(Z, theta_vb, n0, sig2_zeta_vb, t02_inv, c = c) #local parameter zeta, can also be implemented partial
+      # zeta_vb[sample_q] <- update_zeta_vb_(Z[,sample_q], theta_vb, n0[sample_q], sig2_zeta_vb, t02_inv, c = c)
       
       #update theta plus zeta, a mixture of global and local and thus all has to change
       theta_plus_zeta_vb <- sweep(tcrossprod(theta_vb, rep(1, q)), 2, zeta_vb, `+`) 
