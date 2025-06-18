@@ -30,6 +30,21 @@ update_m2_beta_ <- function(gam_vb, mu_beta_vb, sig2_beta_vb, sweep = FALSE, mis
   
 }
 
+update_m2_beta_partial_ <- function(m2_beta, gam_vb, mu_beta_vb, sig2_beta_vb, sweep = FALSE, mis_pat = NULL, sample_q) {
+  
+  if(sweep | is.null(mis_pat)) {
+    
+    m2_beta[,sample_q] = sweep(mu_beta_vb[,sample_q] ^ 2, 2, sig2_beta_vb[sample_q], `+`) * gam_vb[,sample_q] #using or not using sweep is actually the same
+    
+  } else {
+    
+    m2_beta[,sample_q] = (mu_beta_vb[,sample_q] ^ 2 + sig2_beta_vb[sample_q]) * gam_vb[,sample_q]
+    
+  }
+  
+  return( m2_beta)
+}
+
 update_sig2_beta_vb_ <- function(n, sig2_inv_vb, tau_vb = NULL, X_norm_sq = NULL, c = 1) {
   
   if(is.null(tau_vb)) {
@@ -47,6 +62,27 @@ update_sig2_beta_vb_ <- function(n, sig2_inv_vb, tau_vb = NULL, X_norm_sq = NULL
       1 / (c * sweep(X_norm_sq + sig2_inv_vb, 2, tau_vb, `*`))
     
   }
+}
+
+update_sig2_beta_vb_partial_ <- function(sig2_beta_vb, n, sig2_inv_vb, tau_vb = NULL, X_norm_sq = NULL, sample_q, c = 1) {
+  
+  if(is.null(tau_vb)) {
+    
+    if (is.null(X_norm_sq)) 
+      sig2_beta_vb = 1 / (c * (n - 1 + sig2_inv_vb))
+    else
+      sig2_beta_vb =  1/ (c * (X_norm_sq + sig2_inv_vb))
+    
+  } else {
+    
+    if (is.null(X_norm_sq)) #no missing 
+      sig2_beta_vb[sample_q] = 1 / (c * (n - 1 + sig2_inv_vb) * tau_vb[sample_q])
+    else
+      sig2_beta_vb[sample_q] = 1 / (c * sweep(X_norm_sq + sig2_inv_vb, 2, tau_vb[sample_q], `*`))
+    
+  }
+  
+  return(sig2_beta_vb)
 }
 
 # update_X_beta_vb_ <- function(X, beta_vb) X %*% beta_vb
@@ -101,7 +137,6 @@ update_zeta_vb_ <- function(Z, mat_add, n0, sig2_zeta_vb, t02_inv, c = 1) {
   # sig2_zeta_vb and t02_inv is stored as a scalar which represents the value on the diagonal of the corresponding diagonal matrix
   as.vector(c * sig2_zeta_vb * (colSums(Z) + t02_inv * n0 - sum(mat_add))) # mat_add = theta_vb
 
-
 }
 
 #####################
@@ -128,6 +163,17 @@ update_eta_vb_ <- function(n, eta, gam_vb, mis_pat = NULL, c = 1) {
   
 }
 
+update_eta_vb_partial_ <- function(eta_vb, n, eta, gam_vb, mis_pat = NULL, sample_q, c = 1) {
+  
+  if (is.null(mis_pat)){
+    eta_vb[sample_q] = c * (eta + n / 2 + colSums(gam_vb[,sample_q]) / 2) - c + 1
+  }else{
+    c * (eta + colSums(mis_pat) / 2 + colSums(gam_vb) / 2) - c + 1 #not implemented yet
+  }
+
+  return(eta_vb)
+}
+
 update_kappa_vb_ <- function(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
                              beta_vb, m2_beta, sig2_inv_vb, 
                              X_norm_sq = NULL, c = 1) {
@@ -150,6 +196,32 @@ update_kappa_vb_ <- function(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa,
   }
   
 }
+
+
+update_kappa_vb_partial_ <- function(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
+                             beta_vb, m2_beta, sig2_inv_vb, 
+                             X_norm_sq = NULL, sample_q, c = 1) {
+  
+  diag_cp <- colSums(cp_X_Xbeta[,sample_q]*beta_vb[,sample_q])
+  
+  if (is.null(X_norm_sq)) { # no missing values in Y
+    
+    c * (kappa[sample_q] + (Y_norm_sq[sample_q] - 2 * colSums(beta_vb[,sample_q] * t(cp_Y_X)[,sample_q])  +
+                    (n - 1 + sig2_inv_vb) * colSums(m2_beta[,sample_q]) +
+                    diag_cp - (n - 1) * colSums(beta_vb[,sample_q]^2))/ 2) 
+    
+    
+  } else {
+    
+    c * (kappa + (Y_norm_sq - 2 * colSums(beta_vb * t(cp_Y_X))  +
+                    sig2_inv_vb * colSums(m2_beta) + colSums(X_norm_sq * m2_beta) +
+                    diag_cp - colSums(X_norm_sq * beta_vb^2))/ 2)
+    
+  }
+  
+
+}
+
 
 
 update_kappa_vb_no_precompute_ <- function(Y, kappa, X_beta_vb, beta_vb, m2_beta, sig2_inv_vb, 
@@ -255,7 +327,7 @@ update_Z_ <- function(gam_vb, mat_v_mu, log_1_pnorm, log_pnorm, c = 1) {
 }
 
 update_Z_partial_ <- function(Z, gam_vb, mat_v_mu, log_1_pnorm, log_pnorm, sample_q, c = 1) {
-  
+
   # log_1_pnorm = log_1_min_Phi_theta_plus_zeta
   # log_pnorm = log_Phi_theta_plus_zeta
   # mat_v_mu = theta_plus_zeta_vb
@@ -273,12 +345,14 @@ update_Z_partial_ <- function(Z, gam_vb, mat_v_mu, log_1_pnorm, log_pnorm, sampl
   }
   
   mat_v_mu_sub <- mat_v_mu[, sample_q, drop = FALSE]
-  gam_vb_sub <- gam_vb[, sample_q, drop = FALSE]
   
   imr0 <- inv_mills_ratio_(0, sqrt_c * mat_v_mu_sub, log_1_pnorm_all, log_pnorm_all)
   imr1 <- inv_mills_ratio_(1, sqrt_c * mat_v_mu_sub, log_1_pnorm_all, log_pnorm_all)
   
+  gam_vb_sub <- gam_vb[, sample_q, drop = FALSE]
+  
   Z_sub <- (gam_vb_sub * (imr1 - imr0) + imr0) / sqrt_c + mat_v_mu_sub
+
   
   # Z2 = Z
   Z[, sample_q] <- Z_sub
