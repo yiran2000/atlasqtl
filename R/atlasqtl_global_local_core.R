@@ -334,13 +334,16 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
 
 
       #beta
-      # sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c)
       # m2_beta <- update_m2_beta_(gam_vb, mu_beta_vb, sig2_beta_vb, mis_pat = mis_pat) #second moment of beta
-      
-      sig2_beta_vb <- update_sig2_beta_vb_partial_(sig2_beta_vb, n, sig2_inv_vb, tau_vb, X_norm_sq, sample_q, c = c)
+     
       m2_beta <- update_m2_beta_partial_(m2_beta, gam_vb, mu_beta_vb, sig2_beta_vb, mis_pat = mis_pat, sample_q = sample_q) #second moment of beta
       
-  
+      
+      #Z
+      # Z1 <- update_Z_(gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, c = c)
+      Z <- update_Z_partial_(Z, gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, sample_q, c = c)
+
+
       # % # local parameter tau
       # eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat, c = c)
       # kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
@@ -356,14 +359,11 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       tau_vb[sample_q] <- eta_vb[sample_q] / kappa_vb[sample_q]
       
-      log_tau_vb[sample_q] <- update_log_tau_vb_(eta_vb[sample_q], kappa_vb[sample_q])
-
+      # sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c)
+      sig2_beta_vb <- update_sig2_beta_vb_partial_(sig2_beta_vb, n, sig2_inv_vb, tau_vb, X_norm_sq, sample_q, c = c)
       
-      #Z
-      # Z1 <- update_Z_(gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, c = c)
-      Z <- update_Z_partial_(Z, gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, sample_q, c = c)
-
-
+      log_tau_vb[sample_q] <- update_log_tau_vb_(eta_vb[sample_q], kappa_vb[sample_q])
+      
       
       time_local = toc()
       
@@ -452,6 +452,8 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       #save all zeta_vb to visualize
       zeta_ls = append(zeta_ls, list(zeta_vb))
+      
+      
       
       if (verbose == 2 && (it == 1 | it %% max(5, batch_conv) == 0)) {
         
