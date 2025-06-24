@@ -316,8 +316,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
         #               log_sig2_inv_vb, log_tau_vb,
         #               beta_vb, cp_X_Xbeta, mu_beta_vb, sig2_beta_vb, tau_vb, shuffled_ind, sample_q, c = c)
         
-        # gam_vb_old <- gam_vb + 0
-        # beta_vb_old <- beta_vb + 0
         coreDualLoop(cp_X, cp_Y_X, gam_vb, log_Phi_theta_plus_zeta,
                      log_1_min_Phi_theta_plus_zeta, log_sig2_inv_vb, log_tau_vb,
                      beta_vb, cp_X_Xbeta, mu_beta_vb, sig2_beta_vb, tau_vb,
