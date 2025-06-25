@@ -160,16 +160,17 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
     sig2_inv_vb <- nu_vb / rho_vb
     log_sig2_inv_vb <- update_log_sig2_inv_vb_(nu_vb, rho_vb)
     
-    #one additional update from its initializations
-    sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c)
     
-    # % # log_tau ( we have tau inialized but to get log tau, a little extra calc)
+    # % # log_tau ( we have tau initialized but to get log tau, a little extra calc)
     eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat, c = c)
     kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
                                  beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, c = c)
     
     log_tau_vb <- update_log_tau_vb_(eta_vb, kappa_vb)
     # tau_vb <- eta_vb / kappa_vb #may or may not need?
+    
+    #one additional update to keep up with the new 
+    # sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c)
     
     # Z <- update_Z_(gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, c = c)
     
@@ -321,6 +322,13 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       # update VB parameters
 
+      #sig2_beta, depending on tau
+      tic("sig2_beta")
+      
+      sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c) 
+      
+      t_sig2_beta = toc()
+      time_sig2_beta = t_sig2_beta$toc - t_sig2_beta$tic
       
       # different possible batch-coordinate ascent schemes:
       #
@@ -511,6 +519,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       rho_vb <- update_rho_vb_(rho, m2_beta, tau_vb, c = c)
       
       sig2_inv_vb <- nu_vb / rho_vb
+      log_sig2_inv_vb <- update_log_sig2_inv_vb_(nu_vb, rho_vb)
 
       t_sigma = toc()
       time_sigma = t_sigma$toc - t_sigma$tic
@@ -538,14 +547,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       t_tau = toc()
       time_tau = t_tau$toc - t_tau$tic
       # % #
-      
-      #sig2_beta, depending on tau
-      tic("sig2_beta")
-      
-      sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c) 
-      
-      t_sig2_beta = toc()
-      time_sig2_beta = t_sig2_beta$toc - t_sig2_beta$tic
+    
       
       if (verbose == 2 && (it == 1 | it %% max(5, batch_conv) == 0)) {
         
@@ -615,9 +617,9 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
         if (verbose != 0 & (it == it_endAnneal | it %% max(5, batch_conv) == 0))
           cat(paste0("ELBO = ", format(lb_new), "\n\n"))
         
-        # if (debug && lb_new + eps < lb_old){
-        #   stop("ELBO not increasing monotonically. Exit. ")
-        # }
+        if (debug && lb_new + eps < lb_old){
+          stop("ELBO not increasing monotonically. Exit. ")
+        }
 
         # diff_lb = abs(lb_new - lb_old)
         diff_lb = lb_new - lb_old
