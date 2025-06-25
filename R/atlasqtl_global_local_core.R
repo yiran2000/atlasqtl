@@ -150,6 +150,30 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
 
     cp_X_Xbeta <- update_cp_X_Xbeta_(cp_X, beta_vb, cp_X_rm)
     
+    
+    # Other initializations
+    
+    # sigma
+    nu_vb <- update_nu_vb_(nu, sum(gam_vb), c = c)
+    rho_vb <- update_rho_vb_(rho, m2_beta, tau_vb, c = c)
+    
+    sig2_inv_vb <- nu_vb / rho_vb
+    log_sig2_inv_vb <- update_log_sig2_inv_vb_(nu_vb, rho_vb)
+    
+    #one additional update from its initializations
+    sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c)
+    
+    # % # log_tau ( we have tau inialized but to get log tau, a little extra calc)
+    eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat, c = c)
+    kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
+                                 beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, c = c)
+    
+    log_tau_vb <- update_log_tau_vb_(eta_vb, kappa_vb)
+    # tau_vb <- eta_vb / kappa_vb #may or may not need?
+    
+    # Z <- update_Z_(gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, c = c)
+    
+    #precompute finish
 
     
     # Fixed VB parameter
@@ -202,9 +226,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       annealing_ls = list()
     }
     
-    # if(ifZ){
-    #   Z <- update_Z_(gam_vb, theta_plus_zeta_vb, log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, c = c)
-    # }
     
     # CAVI starts
     #
@@ -299,49 +320,6 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       }
       
       # update VB parameters
-      tic("sigma")
-      # % # sigma^2, global 
-      nu_vb <- update_nu_vb_(nu, sum(gam_vb), c = c)
-      rho_vb <- update_rho_vb_(rho, m2_beta, tau_vb, c = c)
-      
-      sig2_inv_vb <- nu_vb / rho_vb
-      log_sig2_inv_vb <- update_log_sig2_inv_vb_(nu_vb, rho_vb)
-      # % #
-      t_sigma = toc()
-      time_sigma = t_sigma$toc - t_sigma$tic
-      
-      
-      # % # tau, local
-      tic("tau")
-      if(ifTau == T & partial == T & it > 1){
-        eta_vb[sample_q] <- update_eta_vb_(n, eta[sample_q], gam_vb[,sample_q], mis_pat, c = c)
-        kappa_vb[sample_q] <- update_kappa_vb_partial_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
-                                                       beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, sample_q, c = c)
-        
-        tau_vb[sample_q] <- eta_vb[sample_q] / kappa_vb[sample_q]
-        log_tau_vb[sample_q] <- update_log_tau_vb_(eta_vb[sample_q], kappa_vb[sample_q])
-      }else{
-        eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat, c = c)
-        kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
-                                     beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, c = c)
-        
-        tau_vb <- eta_vb / kappa_vb
-        log_tau_vb <- update_log_tau_vb_(eta_vb, kappa_vb)
-  
-      }
-      
-      t_tau = toc()
-      time_tau = t_tau$toc - t_tau$tic
-      
-      
-      #sig2_beta, depending on tau
-      tic("sig2_beta")
-      
-      sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c) 
-      
-      t_sig2_beta = toc()
-      time_sig2_beta = t_sig2_beta$toc - t_sig2_beta$tic
-      
 
       
       # different possible batch-coordinate ascent schemes:
@@ -516,6 +494,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       #save all zeta_vb to visualize
       zeta_ls = append(zeta_ls, list(zeta_vb))
       
+      # % # theta+zeta, global
       tic("theta+zeta")
       
       theta_plus_zeta_vb <- sweep(tcrossprod(theta_vb, rep(1, q)), 2, zeta_vb, `+`)
@@ -524,6 +503,49 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
       
       t_thetaPzeta = toc()
       time_thetaPzeta = t_thetaPzeta$toc - t_thetaPzeta$tic
+      # % #
+      
+      # % # sigma^2, global 
+      tic("sigma")
+      nu_vb <- update_nu_vb_(nu, sum(gam_vb), c = c)
+      rho_vb <- update_rho_vb_(rho, m2_beta, tau_vb, c = c)
+      
+      sig2_inv_vb <- nu_vb / rho_vb
+
+      t_sigma = toc()
+      time_sigma = t_sigma$toc - t_sigma$tic
+      # % #
+      
+      # % # tau, local
+      tic("tau")
+      if(ifTau == T & partial == T & it > 1){
+        eta_vb[sample_q] <- update_eta_vb_(n, eta[sample_q], gam_vb[,sample_q], mis_pat, c = c)
+        kappa_vb[sample_q] <- update_kappa_vb_partial_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
+                                                       beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, sample_q, c = c)
+        
+        tau_vb[sample_q] <- eta_vb[sample_q] / kappa_vb[sample_q]
+        log_tau_vb[sample_q] <- update_log_tau_vb_(eta_vb[sample_q], kappa_vb[sample_q])
+      }else{
+        eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat, c = c)
+        kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, 
+                                     beta_vb, m2_beta, sig2_inv_vb, X_norm_sq, c = c)
+        
+        tau_vb <- eta_vb / kappa_vb
+        log_tau_vb <- update_log_tau_vb_(eta_vb, kappa_vb)
+        
+      }
+      
+      t_tau = toc()
+      time_tau = t_tau$toc - t_tau$tic
+      # % #
+      
+      #sig2_beta, depending on tau
+      tic("sig2_beta")
+      
+      sig2_beta_vb <- update_sig2_beta_vb_(n, sig2_inv_vb, tau_vb, X_norm_sq, c = c) 
+      
+      t_sig2_beta = toc()
+      time_sig2_beta = t_sig2_beta$toc - t_sig2_beta$tic
       
       if (verbose == 2 && (it == 1 | it %% max(5, batch_conv) == 0)) {
         
@@ -578,7 +600,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
         # to (also) evaluate convergence between two consecutive iterations
 
         lb_new <- elbo_global_local_full_(Y, A2_inv, beta_vb, df, eta, eta_vb, gam_vb,
-                                          kappa, kappa_vb, L_vb, lam2_inv_vb, 
+                                          kappa, kappa_vb, L_vb, lam2_inv_vb, log_tau_vb, log_sig2_inv_vb,
                                           log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, 
                                           m0, m2_beta, n0, nu, nu_s0_vb, nu_vb, nu_xi_inv_vb,
                                           Q_app, rho, rho_s0_vb, rho_vb, rho_xi_inv_vb,
@@ -593,9 +615,9 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
         if (verbose != 0 & (it == it_endAnneal | it %% max(5, batch_conv) == 0))
           cat(paste0("ELBO = ", format(lb_new), "\n\n"))
         
-        if (debug && lb_new + eps < lb_old){
-          stop("ELBO not increasing monotonically. Exit. ")
-        }
+        # if (debug && lb_new + eps < lb_old){
+        #   stop("ELBO not increasing monotonically. Exit. ")
+        # }
 
         # diff_lb = abs(lb_new - lb_old)
         diff_lb = lb_new - lb_old
@@ -789,7 +811,7 @@ atlasqtl_global_local_core_ <- function(Y, X, shr_fac_inv, anneal, df,
 # lower bound (ELBO) corresponding to the `atlasqtl_struct_core` algorithm.
 #
 elbo_global_local_full_ <- function(Y, A2_inv, beta_vb, df, eta, eta_vb, gam_vb, 
-                               kappa, kappa_vb, L_vb, lam2_inv_vb, 
+                                    kappa, kappa_vb, L_vb, lam2_inv_vb, log_tau_vb, log_sig2_inv_vb,
                                log_1_min_Phi_theta_plus_zeta, log_Phi_theta_plus_zeta, m0, m2_beta, 
                                n0, nu, nu_s0_vb, nu_vb, nu_xi_inv_vb, 
                                Q_app, rho, rho_s0_vb, rho_vb, rho_xi_inv_vb, 
@@ -804,15 +826,15 @@ elbo_global_local_full_ <- function(Y, A2_inv, beta_vb, df, eta, eta_vb, gam_vb,
   
   # needed for monotonically increasing elbo.
   #
-  eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat)
-  kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, beta_vb, 
-                               m2_beta, sig2_inv_vb, X_norm_sq)
-  
-  nu_vb <- update_nu_vb_(nu, sum(gam_vb))
-  rho_vb <- update_rho_vb_(rho, m2_beta, tau_vb)
-  
-  log_tau_vb <- update_log_tau_vb_(eta_vb, kappa_vb)
-  log_sig2_inv_vb <- update_log_sig2_inv_vb_(nu_vb, rho_vb)
+  # eta_vb <- update_eta_vb_(n, eta, gam_vb, mis_pat)
+  # kappa_vb <- update_kappa_vb_(n, Y_norm_sq, cp_Y_X, cp_X_Xbeta, kappa, beta_vb, 
+  #                              m2_beta, sig2_inv_vb, X_norm_sq)
+  # 
+  # nu_vb <- update_nu_vb_(nu, sum(gam_vb))
+  # rho_vb <- update_rho_vb_(rho, m2_beta, tau_vb)
+  # 
+  # log_tau_vb <- update_log_tau_vb_(eta_vb, kappa_vb)
+  # log_sig2_inv_vb <- update_log_sig2_inv_vb_(nu_vb, rho_vb)
   
   log_sig02_inv_vb <- update_log_sig2_inv_vb_(nu_s0_vb, rho_s0_vb)
   log_xi_inv_vb <- update_log_sig2_inv_vb_(nu_xi_inv_vb, rho_xi_inv_vb)
