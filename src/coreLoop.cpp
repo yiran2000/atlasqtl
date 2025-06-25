@@ -88,9 +88,9 @@ void coreDualLoop(const MapMat cp_X,
                                                - mu_beta_vb(j, k)*mu_beta_vb(j, k) / (2 * sig2_beta_vb[k])
                                                + cst[k])));
                                                
-                                               m1_beta(j, k) = gam_vb(j, k) * mu_beta_vb(j, k);
-                                               
-                                               cp_betaX_X.col(k) += (m1_beta(j, k) - m1_beta_jk) * cp_X.col(j);
+      m1_beta(j, k) = gam_vb(j, k) * mu_beta_vb(j, k);
+       
+      cp_betaX_X.col(k) += (m1_beta(j, k) - m1_beta_jk) * cp_X.col(j);
                                                
                                                
     } 
